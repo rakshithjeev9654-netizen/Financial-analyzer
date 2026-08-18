@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ company_name }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Company Header ──────────────────────────────────────────────── -->
+<div class="dash-header print-full">
+  <div>
+    <h1 class="company-name">{{ company_name }}</h1>
+    <p class="period-label">{{ period }}</p>
+  </div>
+  <div class="dash-header-actions no-print">
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">⬆ Upload New Report</a>
+    <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm">🕓 History</a>
+  </div>
+</div>
+
+{% if parse_warnings %}
+<div class="warning-bar no-print">
+  {% for w in parse_warnings %}<p>⚠️ {{ w }}</p>{% endfor %}
+</div>
+{% endif %}
+
+<!-- ── KPI Row ─────────────────────────────────────────────────────── -->
+<div class="kpi-row print-full">
+  <div class="kpi-card">
+    <!-- Health donut SVG -->
+    {{ charts.health | safe }}
+  </div>
+  {% for k in kpis %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ k.name }}</div>
+    <div class="kpi-value">{{ k.formatted_value }}</div>
+    <div class="kpi-sub">{{ k.category | title }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Overview Chart ──────────────────────────────────────────────── -->
+{% if charts.overview %}
+<div class="ratio-section print-full" style="margin-bottom:22px;">
+  <div class="section-summary" style="cursor:default;">
+    <div class="section-icon-wrap icon-profitability">📊</div>
+    <span class="section-title">All Ratios — Overview</span>
+  </div>
+  <div class="section-body" style="overflow-x:auto;">
+    {{ charts.overview | safe }}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── ML + Rule-based ─────────────────────────────────────────────── -->
+<div class="two-col print-full" style="margin-bottom:22px;">
+
+  <div class="ratio-section no-print">
+    <div class="section-summary" style="cursor:default;">
+      <div class="section-icon-wrap icon-ai">🤖</div>
+      <span class="section-title">AI / ML Layer</span>
+      <span class="ai-badge">Isolation Forest</span>
+    </div>
+    <div class="section-body">
+      <p style="margin-bottom:8px;"><strong>Status:</strong> {{ ml_risk.status }}</p>
+      <p style="margin-bottom:8px;"><strong>Anomaly score:</strong>
+        {{ ml_risk.anomaly_score if ml_risk.anomaly_score is not none else 'N/A' }}</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">{{ ml_risk.explanation }}</p>
+      <form action="{{ url_for('generate_ai') }}" method="post">
+        <button type="submit" class="btn btn-primary btn-sm">📋 Generate Full Analysis Report</button>
+      </form>
+      {% if genai and not genai.question is defined %}
+      <div style="margin-top:16px;padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+        <p style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">📊 Analysis Report</p>
+        <pre style="font-size:12.5px;color:#1e293b;line-height:1.7;white-space:pre-wrap;font-family:-apple-system,Segoe UI,sans-serif;margin:0;">{{ genai.text }}</pre>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ratio-section">
+    <div class="section-summary" style="cursor:default;">
+      <div class="section-icon-wrap icon-compare">📋</div>
+      <span class="section-title">Rule-based Insights</span>
+    </div>
+    <div class="section-body">
+      {% for insight in analysis.insights %}
+      <div style="padding:10px 14px;margin-bottom:8px;background:#f0f9ff;
+                  border-left:3px solid var(--blue);border-radius:0 8px 8px 0;
+                  font-size:13.5px;color:#1e40af;">
+        {{ insight }}
+      </div>
+      {% endfor %}
+      {% if genai and genai.question is defined %}
+      <div style="margin-top:12px;padding:14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+        <p style="font-size:12px;font-weight:800;color:#1e40af;margin-bottom:6px;">❓ {{ genai.question }}</p>
+        <p style="font-size:13px;color:#1e293b;line-height:1.65;white-space:pre-wrap;margin:0;">{{ genai.text }}</p>
+      </div>
+      {% endif %}
+      <div style="margin-top:16px;" class="no-print">
+        <form action="{{ url_for('ask_ai') }}" method="post" style="display:flex;gap:8px;">
+          <input name="question" placeholder="e.g. What are the key risks? How is liquidity?"
+            style="flex:1;padding:9px 14px;border:2px solid var(--border);border-radius:9px;
+                   font-size:13.5px;outline:none;font-family:inherit;" />
+          <button type="submit" class="btn btn-secondary btn-sm">Ask</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Ratio Sections ──────────────────────────────────────────────── -->
+{% set icons = {'liquidity':'💧','profitability':'📈','solvency':'🏛','efficiency':'⚙️'} %}
+{% set icon_classes = {
+    'liquidity':'icon-liquidity',
+    'profitability':'icon-profitability',
+    'solvency':'icon-solvency',
+    'efficiency':'icon-efficiency'
+} %}
+
+{% for cat, items in ratios.items() %}
+<div class="ratio-section print-page-break" style="margin-bottom:22px;">
+  <details open>
+    <summary class="section-summary">
+      <div class="section-icon-wrap {{ icon_classes[cat] }}">{{ icons[cat] }}</div>
+      <span class="section-title">{{ cat | title }} Ratios</span>
+      <span class="section-count">
+        {{ items | selectattr('is_available') | list | length }} / {{ items | length }} available
+      </span>
+      <span class="chevron no-print">▼</span>
+    </summary>
+    <div class="section-body">
+
+      <!-- SVG bar chart for this category -->
+      {% if charts[cat] is defined %}
+      <div style="margin-bottom:20px;overflow-x:auto;">
+        {{ charts[cat] | safe }}
+      </div>
+      {% endif %}
+
+      <!-- Ratio cards -->
+      <div class="ratio-grid">
+        {% for r in items %}
+        {% if r.is_available %}
+        <div class="ratio-card">
+          <div class="rc-name">{{ r.name }}</div>
+          <div class="rc-value">{{ r.formatted_value }}</div>
+          <div class="rc-meta">
+            <span class="rc-prev">Prev: {{ r.formatted_prev }}</span>
+            <span class="rc-change
+              {% if r.change_pct is not none %}
+                {% if r.change_pct >= 0 %}trend-up{% else %}trend-down{% endif %}
+              {% endif %}">
+              {{ r.formatted_change }}
+            </span>
+          </div>
+          <div class="rc-status">
+            <span class="status-pill status-{{ r.status | lower | replace(' ', '-') }}">
+              {{ r.status }}
+            </span>
+          </div>
+          <div class="rc-interp">{{ r.interpretation }}</div>
+          <div class="rc-formula">{{ r.formula }}</div>
+        </div>
+        {% else %}
+        <div class="ratio-card ratio-unavailable">
+          <div class="rc-name">{{ r.name }}</div>
+          <div class="rc-na-badge">Not Available</div>
+          <div class="rc-na-reason">{{ r.unavailable_reason }}</div>
+          <div class="rc-formula">{{ r.formula }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div><!-- /.ratio-grid -->
+
+    </div><!-- /.section-body -->
+  </details>
+</div>
+{% endfor %}
+
+<!-- ── Disclaimer ──────────────────────────────────────────────────── -->
+<div class="warning-bar print-full" style="margin-top:10px;">
+  <strong>Important:</strong> The financial-health score and ML anomaly screen are
+  analytical aids, not credit ratings or investment recommendations.
+  Generative AI answers are grounded only in the analyzed data provided to the application.
+</div>
+
+{% endblock %}

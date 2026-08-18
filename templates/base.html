@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>{% block title %}Financial Report Analyzer{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- ── Navigation ─────────────────────────────────────────────── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="nav-logo">
+        <span class="logo-icon">&#9783;</span>
+        Financial Analyzer
+      </a>
+      <ul class="nav-links">
+        <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+        <li><a href="{{ url_for('history') }}"   class="{% if request.endpoint == 'history'   %}active{% endif %}">History</a></li>
+        <li><a href="{{ url_for('index') }}"      class="{% if request.endpoint == 'index'     %}active{% endif %}">Upload New Report</a></li>
+      </ul>
+      <a href="#" onclick="window.print()" class="btn btn-outline btn-sm">&#8595; Download PDF</a>
+    </div>
+  </nav>
+
+  <!-- ── Flash Messages ─────────────────────────────────────────── -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-container">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">
+            <span>{{ message }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()">&#x2715;</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── Main Content ───────────────────────────────────────────── -->
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>Financial Report Analyzer &mdash; Analytical tool only. Not financial advice.</p>
+  </footer>
+
+  <!-- ── Mobile bottom navigation bar ─────────────────────────────── -->
+  <nav class="mobile-nav">
+    <a href="{{ url_for('index') }}"      class="mobile-nav-item {% if request.endpoint == 'index'     %}active{% endif %}">
+      <span class="mobile-nav-icon">⬆</span><span>Upload</span>
+    </a>
+    <a href="{{ url_for('dashboard') }}"  class="mobile-nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <span class="mobile-nav-icon">📊</span><span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('history') }}"    class="mobile-nav-item {% if request.endpoint == 'history'   %}active{% endif %}">
+      <span class="mobile-nav-icon">🕓</span><span>History</span>
+    </a>
+  </nav>
+
+</body>
+</html>

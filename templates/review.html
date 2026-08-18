@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Extraction Review — {{ company_name }}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="dash-header">
+  <div>
+    <h1 class="company-name">🔍 Extraction Review</h1>
+    <p class="period-label">{{ company_name }} — {{ period }}</p>
+  </div>
+  <div class="dash-header-actions">
+    <a href="{{ url_for('index') }}" class="btn btn-outline">⬆ Re-upload</a>
+  </div>
+</div>
+
+<!-- Layout & quality info banner -->
+<div class="review-info-bar">
+  <div class="review-info-item">
+    <span class="review-info-label">Layout detected</span>
+    <span class="review-info-val">{{ layout | title }}</span>
+  </div>
+  <div class="review-info-item">
+    <span class="review-info-label">Periods found</span>
+    <span class="review-info-val">{{ periods | length }} — {{ periods | join(", ") }}</span>
+  </div>
+  <div class="review-info-item">
+    <span class="review-info-label">Fields extracted</span>
+    <span class="review-info-val review-val-green">{{ found_count }} / 14</span>
+  </div>
+  {% if found_count == 14 %}
+  <div class="review-badge-perfect">✅ All fields found — ready to analyze</div>
+  {% elif found_count >= 8 %}
+  <div class="review-badge-good">⚡ Most fields found — review below</div>
+  {% else %}
+  <div class="review-badge-warn">⚠️ Few fields found — please remap manually</div>
+  {% endif %}
+</div>
+
+{% if warnings %}
+<div class="warning-bar">
+  {% for w in warnings %}<p>⚠️ {{ w }}</p>{% endfor %}
+</div>
+{% endif %}
+
+<!-- Main review form -->
+<form action="{{ url_for('confirm_mapping') }}" method="POST" id="reviewForm">
+  <input type="hidden" name="analysis_id" value="{{ analysis_id }}" />
+
+  <!-- Extraction table -->
+  <div class="ratio-section" style="margin-bottom:22px;">
+    <div class="section-summary" style="cursor:default;">
+      <div class="section-icon-wrap icon-compare">🗂</div>
+      <span class="section-title">Field Mapping — verify and correct</span>
+      <span class="section-count">Each row = one financial line item</span>
+    </div>
+    <div class="section-body" style="padding:0;">
+      <div class="table-wrap">
+        <table class="comparison-table review-table">
+          <thead>
+            <tr>
+              <th style="width:18%">Standard Field</th>
+              <th style="width:20%">Detected As</th>
+              <th style="width:14%">Latest Value</th>
+              <th style="width:10%">Confidence</th>
+              <th style="width:26%">Remap Column</th>
+              <th style="width:12%">Override Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in fields %}
+            <tr class="review-row-{{ f.conf_class }}">
+              <td>
+                <span class="rt-name">{{ f.display_name }}</span>
+                <span class="rt-cat">{{ f.category }}</span>
+              </td>
+              <td>
+                {% if f.raw_label %}
+                  <span class="review-found-label">{{ f.raw_label }}</span>
+                {% else %}
+                  <span class="review-not-found">— not found</span>
+                {% endif %}
+              </td>
+              <td class="num">
+                {% if f.value is not none %}
+                  <strong>{{ "{:,.0f}".format(f.value) }}</strong>
+                {% else %}
+                  <span class="review-not-found">N/A</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="conf-bar-wrap">
+                  <div class="conf-bar conf-bar-{{ f.conf_class }}" style="width:{{ (f.confidence * 100) | int }}%"></div>
+                </div>
+                <div class="conf-label">{{ (f.confidence * 100) | int }}%</div>
+              </td>
+              <td>
+                <select name="map_{{ f.field }}" class="review-select">
+                  <option value="__keep__">— keep detected ({{ f.raw_label or 'none' }})</option>
+                  <option value="__skip__">— mark as Not Available</option>
+                  {% for col in all_columns %}
+                  <option value="{{ col }}" {% if col == f.raw_label %}selected{% endif %}>{{ col }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <input type="number" step="any"
+                  name="override_{{ f.field }}"
+                  placeholder="optional"
+                  class="review-override-input"
+                  title="Enter a value manually to override what was extracted" />
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unmatched columns -->
+  {% if unmatched %}
+  <div class="ratio-section" style="margin-bottom:22px;">
+    <details>
+      <summary class="section-summary">
+        <div class="section-icon-wrap icon-efficiency">❓</div>
+        <span class="section-title">Unrecognized Columns ({{ unmatched | length }})</span>
+        <span class="section-count">These were not matched to any standard field</span>
+        <span class="chevron">▼</span>
+      </summary>
+      <div class="section-body">
+        <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+          If any of these columns contain financial data, use the dropdowns above to remap them to the correct field.
+        </p>
+        <div class="unmatched-chips">
+          {% for col in unmatched %}
+          <span class="unmatched-chip">{{ col }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Period values preview -->
+  {% if periods | length > 1 %}
+  <div class="ratio-section" style="margin-bottom:22px;">
+    <details>
+      <summary class="section-summary">
+        <div class="section-icon-wrap icon-profitability">📅</div>
+        <span class="section-title">Period Preview</span>
+        <span class="section-count">{{ periods | length }} periods detected</span>
+        <span class="chevron">▼</span>
+      </summary>
+      <div class="section-body">
+        <div class="table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                {% for p in periods %}<th class="num">{{ p }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for f in fields %}
+              {% if f.value is not none %}
+              <tr>
+                <td><span class="rt-name">{{ f.display_name }}</span></td>
+                {% for p in periods %}
+                <td class="num">
+                  {% if p in f.period_values %}
+                    {{ "{:,.0f}".format(f.period_values[p]) }}
+                  {% else %}
+                    <span style="color:var(--muted)">—</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <!-- Action buttons -->
+  <div class="review-actions">
+    <a href="{{ url_for('index') }}" class="btn btn-outline" style="color:var(--navy);border-color:var(--navy);">
+      ⬆ Re-upload Different File
+    </a>
+    <button type="submit" class="btn btn-primary" id="confirmBtn">
+      <span id="confirmText">✅ Confirm &amp; Run Analysis</span>
+      <span id="confirmLoading" class="hidden">⏳ Analyzing…</span>
+    </button>
+  </div>
+
+</form>
+
+<script>
+document.getElementById('reviewForm').addEventListener('submit', function() {
+  document.getElementById('confirmText').classList.add('hidden');
+  document.getElementById('confirmLoading').classList.remove('hidden');
+  document.getElementById('confirmBtn').disabled = true;
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,9 @@
+uploads/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.pyw
+.bob/
+genai-financial-assistant/

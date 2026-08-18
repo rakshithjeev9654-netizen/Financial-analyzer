@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Upload Report — Financial Analyzer{% endblock %}
+
+{% block content %}
+<div class="upload-page">
+  <div class="upload-hero">
+    <div class="upload-hero-icon">📊</div>
+    <h1>Financial Report Analyzer</h1>
+    <p class="hero-sub">Upload your financial data to instantly calculate ratios, generate insights, and get AI-powered commentary.</p>
+  </div>
+
+  <!-- Template Download Banner -->
+  <div class="template-banner">
+    <div class="template-banner-left">
+      <span class="template-icon">📥</span>
+      <div>
+        <div class="template-banner-title">Not sure about the format?</div>
+        <div class="template-banner-sub">Download our ready-made Excel template with all required columns and example data.</div>
+      </div>
+    </div>
+    <a href="{{ url_for('download_template') }}" class="btn btn-template">
+      ⬇ Download Excel Template
+    </a>
+  </div>
+
+  <div class="upload-card">
+    <form id="uploadForm" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="company_name">Company Name <span class="optional">(optional)</span></label>
+          <input type="text" id="company_name" name="company_name" placeholder="e.g. Acme Corp" />
+        </div>
+        <div class="form-group">
+          <label for="period">Reporting Period <span class="optional">(optional)</span></label>
+          <input type="text" id="period" name="period" placeholder="e.g. FY 2024 / Q3 2024" />
+        </div>
+      </div>
+
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-icon">📂</div>
+        <p class="drop-title">Drag &amp; drop your file here</p>
+        <p class="drop-sub">or <label for="fileInput" class="file-link">browse to choose a file</label></p>
+        <div class="drop-formats">
+          <span class="format-badge">CSV</span>
+          <span class="format-badge">XLSX</span>
+          <span class="format-badge">PDF</span>
+        </div>
+        <input type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls,.pdf" hidden />
+        <div id="fileChosen" class="file-chosen hidden"></div>
+      </div>
+
+      <details class="data-guide">
+        <summary>📋 What data is needed?</summary>
+        <div class="data-guide-body">
+          <p>Your file should have column headers matching these names (case-insensitive):</p>
+          <div class="field-grid">
+            <div>
+              <h4>Balance Sheet</h4>
+              <ul>
+                <li>current_assets</li>
+                <li>current_liabilities</li>
+                <li>inventory / inventories</li>
+                <li>cash / cash_and_cash_equivalents</li>
+                <li>total_assets</li>
+                <li>total_liabilities / total_debt</li>
+                <li>shareholders_equity / total_equity</li>
+                <li>accounts_receivable</li>
+                <li>accounts_payable</li>
+              </ul>
+            </div>
+            <div>
+              <h4>Income Statement</h4>
+              <ul>
+                <li>revenue / total_revenue / sales</li>
+                <li>cogs / cost_of_goods_sold</li>
+                <li>operating_income / ebit</li>
+                <li>net_income / net_profit</li>
+                <li>interest_expense</li>
+              </ul>
+            </div>
+          </div>
+          <p class="data-note">ℹ️ Only fields present in your file are used. Any ratio that can't be computed shows as <strong>Not Available</strong> with the specific reason.</p>
+        </div>
+      </details>
+
+      <button type="submit" class="btn btn-primary btn-full" id="analyzeBtn">
+        <span id="btnText">🚀 Analyze Report</span>
+        <span id="btnLoading" class="hidden">⏳ Analyzing…</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const dropZone   = document.getElementById('dropZone');
+  const fileInput  = document.getElementById('fileInput');
+  const fileChosen = document.getElementById('fileChosen');
+  const form       = document.getElementById('uploadForm');
+  const btn        = document.getElementById('analyzeBtn');
+
+  fileInput.addEventListener('change', () => showFile(fileInput.files[0]));
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFile(e.dataTransfer.files[0]); }
+  });
+
+  function showFile(file) {
+    if (!file) return;
+    fileChosen.textContent = '✅ ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    fileChosen.classList.remove('hidden');
+  }
+
+  form.addEventListener('submit', () => {
+    document.getElementById('btnText').classList.add('hidden');
+    document.getElementById('btnLoading').classList.remove('hidden');
+    btn.disabled = true;
+  });
+</script>
+{% endblock %}

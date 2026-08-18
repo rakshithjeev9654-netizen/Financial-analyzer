@@ -1,0 +1,15 @@
+account,Period 1,Period 2,Period 3,Period 4,effective_tax_rate
+Sales,"69,574","79,701","93,461","106,963",33215
+Cost of Revenue,"48,889",#N/A,"65,674","75,162",INR
+Op Profit,"16,091","18,433","21,615","24,738",INR
+Profit for Period,"5,514","6,317","7,407","8,477",KPMG
+short_term_assets,"33,912","38,848","45,555","52,136",84.80%
+Curr Liabilities,"24,745","28,347","33,241","38,044",INR
+Inventories,"12,245","14,028","16,449",N/A,PwC
+Cash,"8,368","9,586","11,241","12,865",KPMG
+Total Balance Sheet Assets,"73,118","83,761","98,222","112,412",JPY
+Gesamtverbindlichkeiten,N/A,"49,181","57,672","66,004",33.64%
+shareholders_equity,"30,186","34,580","40,550","46,408",31.88%
+Forderungen,"13,298","15,234","17,864","20,445",81766
+accounts_payable,"2,443","2,798","3,282","3,756",9908
+Borrowing Costs,"1,447","1,658","1,944","2,225",59276
